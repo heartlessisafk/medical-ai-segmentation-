@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical AI Segmentation Prototype</title>
+    <meta name="description" content="Brain tumor segmentation prototype using Flask, PyTorch, and a custom U-Net model.">
+    <link rel="preconnect" href="https://api.fontshare.com">
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark" aria-label="Medical AI logo">
+                    <svg viewBox="0 0 64 64" fill="none" role="img" aria-hidden="true">
+                        <rect x="10" y="10" width="44" height="44" rx="14" stroke="currentColor" stroke-width="4"></rect>
+                        <path d="M22 32H42" stroke="currentColor" stroke-width="4" stroke-linecap="round"></path>
+                        <path d="M32 22V42" stroke="currentColor" stroke-width="4" stroke-linecap="round"></path>
+                        <circle cx="32" cy="32" r="8" fill="currentColor" opacity="0.18"></circle>
+                    </svg>
+                </div>
+                <div>
+                    <p class="eyebrow">Portfolio Project</p>
+                    <h1>Medical AI Segmentation</h1>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Primary">
+                <a href="#workspace" class="nav-link active">Workspace</a>
+                <a href="#pipeline" class="nav-link">Pipeline</a>
+                <a href="#notes" class="nav-link">Notes</a>
+            </nav>
+
+            <section class="sidebar-card">
+                <p class="sidebar-label">Capabilities</p>
+                <ul class="feature-list" role="list">
+                    <li>Upload MRI image</li>
+                    <li>Generate segmentation mask</li>
+                    <li>Overlay predicted region</li>
+                    <li>Show confidence metrics</li>
+                </ul>
+            </section>
+
+            <section class="sidebar-card">
+                <p class="sidebar-label">Model</p>
+                <div class="meta-grid">
+                    <div>
+                        <span class="meta-key">Architecture</span>
+                        <span class="meta-value">U-Net</span>
+                    </div>
+                    <div>
+                        <span class="meta-key">Task</span>
+                        <span class="meta-value">Binary segmentation</span>
+                    </div>
+                    <div>
+                        <span class="meta-key">Backend</span>
+                        <span class="meta-value">Flask + PyTorch</span>
+                    </div>
+                </div>
+            </section>
+        </aside>
+
+        <div class="content-area">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Clinical Imaging Prototype</p>
+                    <p class="topbar-title">Brain Tumor Segmentation Dashboard</p>
+                </div>
+                <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                </button>
+            </header>
+
+            <main id="main-content" class="main-content">
+                <section id="workspace" class="hero-grid">
+                    <div class="panel panel-upload">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-label">Inference</p>
+                                <h2>Upload an MRI image</h2>
+                            </div>
+                            <span class="status-chip">Ready</span>
+                        </div>
+
+                        <p class="panel-copy">
+                            Use a brain MRI image in PNG, JPG, BMP, or TIFF format. The system generates a binary tumor mask and an overlay view for quick inspection.
+                        </p>
+
+                        <form id="upload-form" class="upload-form">
+                            <label for="mri-file" class="upload-dropzone" id="dropzone">
+                                <input id="mri-file" name="file" type="file" accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff" hidden>
+                                <span class="upload-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                        <path d="M8 8L12 4L16 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                        <path d="M5 20H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                    </svg>
+                                </span>
+                                <span class="upload-title">Drop MRI image here or click to browse</span>
+                                <span class="upload-subtitle">Max file size: 10 MB</span>
+                            </label>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary" id="run-button">Run Segmentation</button>
+                                <button type="button" class="btn btn-secondary" id="reset-button">Reset</button>
+                            </div>
+                        </form>
+
+                        <div id="message-box" class="message-box" aria-live="polite"></div>
+                    </div>
+
+                    <div class="panel panel-metrics">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-label">Prediction Metrics</p>
+                                <h2>Model response</h2>
+                            </div>
+                        </div>
+
+                        <div class="metric-grid">
+                            <article class="metric-card">
+                                <span class="metric-label">Confidence</span>
+                                <strong id="confidence-value">--</strong>
+                                <small>Max probability in predicted map</small>
+                            </article>
+                            <article class="metric-card">
+                                <span class="metric-label">Coverage</span>
+                                <strong id="coverage-value">--</strong>
+                                <small>Predicted tumor pixels in image</small>
+                            </article>
+                            <article class="metric-card">
+                                <span class="metric-label">Threshold</span>
+                                <strong id="threshold-value">0.50</strong>
+                                <small>Binary segmentation cutoff</small>
+                            </article>
+                        </div>
+
+                        <div class="workflow-card">
+                            <p class="sidebar-label">Inference flow</p>
+                            <ol class="workflow-list">
+                                <li>Validate uploaded image</li>
+                                <li>Preprocess to model size</li>
+                                <li>Run U-Net prediction</li>
+                                <li>Generate mask and overlay</li>
+                            </ol>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="pipeline" class="results-section">
+                    <div class="section-heading">
+                        <div>
+                            <p class="section-label">Visualization</p>
+                            <h2>Segmentation outputs</h2>
+                        </div>
+                        <p class="section-copy">The dashboard displays the original image, generated mask, and overlay output side by side for quick visual review.</p>
+                    </div>
+
+                    <div class="results-grid">
+                        <article class="image-card">
+                            <div class="image-card-header">
+                                <h3>Original MRI</h3>
+                            </div>
+                            <div class="image-frame">
+                                <img id="original-preview" alt="Original MRI preview" src="" hidden>
+                                <div class="empty-state" id="original-empty">No image loaded yet.</div>
+                            </div>
+                        </article>
+
+                        <article class="image-card">
+                            <div class="image-card-header">
+                                <h3>Segmentation Mask</h3>
+                            </div>
+                            <div class="image-frame">
+                                <img id="mask-preview" alt="Predicted segmentation mask" src="" hidden>
+                                <div class="empty-state" id="mask-empty">Mask output will appear here.</div>
+                            </div>
+                        </article>
+
+                        <article class="image-card">
+                            <div class="image-card-header">
+                                <h3>Overlay Result</h3>
+                            </div>
+                            <div class="image-frame">
+                                <img id="overlay-preview" alt="Overlay segmentation result" src="" hidden>
+                                <div class="empty-state" id="overlay-empty">Overlay result will appear here.</div>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <section id="notes" class="info-section">
+                    <article class="panel info-card">
+                        <p class="section-label">Implementation Notes</p>
+                        <h2>Dataset-ready engineering</h2>
+                        <p>
+                            This prototype is structured for BraTS-style workflows. You can begin with preprocessed 2D PNG image-mask pairs and later extend the training pipeline to volumetric NIfTI inputs and multi-modal MRI fusion.
+                        </p>
+                    </article>
+
+                    <article class="panel info-card">
+                        <p class="section-label">Important Notice</p>
+                        <h2>Educational use only</h2>
+                        <p>
+                            This project is intended for learning, prototyping, and portfolio showcase purposes. It is not approved for real-world clinical diagnosis or medical decision-making.
+                        </p>
+                    </article>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+</body>
+</html>
